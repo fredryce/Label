@@ -1,0 +1,1 @@
+tf.initialize_global_variable is needed if tf.Variable are used. if its only constant then no initialization is needed.
