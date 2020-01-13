@@ -1,76 +1,79 @@
-import kivy.core.text
-import cv2
+import kivy
+kivy.require('1.9.0')
+
 from kivy.app import App
-from kivy.base import EventLoop
+from kivy.lang import Builder
+from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.label import Label
+from kivy.uix.camera import Camera
+
 from kivy.uix.image import Image
 from kivy.clock import Clock
 from kivy.graphics.texture import Texture
-from kivy.uix.boxlayout import BoxLayout
-from kivy.core.window import Window
+import cv2
+
+Builder.load_string('''
+<CaputeImage>:
+    orientation: 'vertical'
+    XinCam:
+        id: XinCamera
+        resolution: (720, 1820)
+        play: True
+    Button:
+        text: 'Capture'
+        size_hint_y: None
+        height: '48dp'
+        on_press: root.capture()
+''')
 
 
-class KivyCamera(Image):
+class XinCam(Image):
+    def __init__(self, **kargs):
+        super(XinCam, self).__init__(**kargs)
 
-    def __init__(self, **kwargs):
-        super(KivyCamera, self).__init__(**kwargs)
-        self.capture = None
-
-    def start(self, capture, fps=120):
+    def start(self, capture, fps=60): #setting the capture need to be called before running on_tex
         self.capture = capture
-        Clock.schedule_interval(self.update, 1.0 / fps) #schedule interval for update
-
-    def stop(self):
-        Clock.unschedule_interval(self.update)
-        self.capture = None
+        Clock.schedule_interval(self.update, 1.0 / fps) 
 
     def update(self, dt):
         return_value, frame = self.capture.read()
-        if return_value:
-            texture = self.texture
+        if return_value: self.process_frame(frame)
+        self.canvas.ask_update()
 
-            h, w = frame.shape[0], frame.shape[1] # height is the number of rows and widdth is the columns
-
-            if not texture or texture.width != w or texture.height != h:
-                self.texture = texture = Texture.create(size=(w, h))
-                texture.flip_vertical()
-            texture.blit_buffer(frame.tobytes(), colorfmt='bgr')
-            self.canvas.ask_update()
-
-
-capture = None
+    def process_frame(self, frame): #this shouuld process the frame and modify self.texture
+        #print(frame)
+        h, w = frame.shape[0], frame.shape[1]
+        self.texture = Texture.create(size=(w, h))
+        self.texture.flip_vertical()
+        self.texture.blit_buffer(frame.tobytes(), colorfmt='bgr')
 
 
-class QrtestHome(BoxLayout): #this is refered to as the root from the kv file
-
-    def init_qrtest(self):
-        pass
-
-    def dostart(self, *largs):
-        global capture
-        capture = cv2.VideoCapture(0)
-        self.ids.qrcam.start(capture)
-
-    def doexit(self):
-        global capture
-        if capture != None:
-            capture.release()
-            capture = None
-        EventLoop.close()
+    
 
 
-class qrtestApp(App):
+
+
+
+class CaputeImage(BoxLayout):
+    #wtf init method is called after build. this should only be used to store button functions. never put init method in this function. dk when is it called
+    pass
+
+
+
+class ImageRecognition(App):
+
+    def __init__(self):
+        super(ImageRecognition, self).__init__()
+        self.capture = cv2.VideoCapture(0)
 
     def build(self):
-        Window.clearcolor = (.4,.4,.4,1)
-        Window.size = (400, 300)
-        homeWin = QrtestHome()
-        homeWin.init_qrtest()
-        return homeWin   #this return the root which can be accessed in the kivi file
+        layout = CaputeImage()
+        layout.ids["XinCamera"].start(self.capture)
+        return layout
 
     def on_stop(self):
-        global capture
-        if capture:
-            capture.release()
-            capture = None
+        self.capture.release()
 
-qrtestApp().run()
+if __name__ == "__main__":
+    imagerecognition = ImageRecognition()
+    imagerecognition.run()
