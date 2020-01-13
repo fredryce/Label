@@ -7,6 +7,9 @@ from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.label import Label
 from kivy.uix.camera import Camera
 
+
+
+from kivy.utils import platform
 from kivy.uix.image import Image
 from kivy.clock import Clock
 from kivy.graphics.texture import Texture
@@ -17,13 +20,14 @@ Builder.load_string('''
     orientation: 'vertical'
     XinCam:
         id: XinCamera
-        resolution: (720, 1820)
+        resolution: (640, 480)
         play: True
-    Button:
-        text: 'Capture'
+
+    ToggleButton:
+        text: 'Play'
+        on_press: XinCamera.play = not XinCamera.play
         size_hint_y: None
         height: '48dp'
-        on_press: root.capture()
 ''')
 
 
@@ -56,7 +60,22 @@ class XinCam(Image):
 
 class CaputeImage(BoxLayout):
     #wtf init method is called after build. this should only be used to store button functions. never put init method in this function. dk when is it called
-    pass
+    def __init__(self, **kargs):
+        super(CaputeImage, self).__init__(**kargs)
+        self._request_android_permissions()
+
+    @staticmethod
+    def is_android():
+        return platform == 'android'
+
+    def _request_android_permissions(self):
+        """
+        Requests CAMERA permission on Android.
+        """
+        if not self.is_android():
+            return
+        from android.permissions import request_permission, Permission
+        request_permission(Permission.CAMERA)
 
 
 
