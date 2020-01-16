@@ -5,6 +5,7 @@ from kivy.app import App
 from kivy.lang import Builder
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.label import Label
+from kivy.uix.button import Button
 from kivy.uix.camera import Camera
 from kivy.uix.screenmanager import ScreenManager, Screen
 
@@ -17,53 +18,31 @@ from kivy.graphics.texture import Texture
 import cv2
 
 Builder.load_string('''
-<CaputeImage>:
+<Browse_file@Button>:
+    font_size: 32
+    color: 0, 0, 0, 1
+    size: 150, 150
+<First_screen>:
     orientation: 'vertical'
-    XinCam:
-        id: XinCamera
-        resolution: (640, 480)
-        play: True
-
-    ToggleButton:
-        text: 'Play'
-        on_press: XinCamera.play = not XinCamera.play
-        size_hint_y: None
-        height: '48dp'
-''')
-
-
-class XinCam(Image):
-    def __init__(self, **kargs):
-        super(XinCam, self).__init__(**kargs)
-
-    def start(self, capture, fps=60): #setting the capture need to be called before running on_tex
-        self.capture = capture
-        Clock.schedule_interval(self.update, 1.0 / fps) 
-
-    def update(self, dt):
-        return_value, frame = self.capture.read()
-        if return_value: self.process_frame(frame)
-        self.canvas.ask_update()
-
-    def process_frame(self, frame): #this shouuld process the frame and modify self.texture
-        #print(frame)
-        h, w = frame.shape[0], frame.shape[1]
-        self.texture = Texture.create(size=(w, h))
-        self.texture.flip_vertical()
-        self.texture.blit_buffer(frame.tobytes(), colorfmt='bgr')
-
+    Browse_file:
+        text: 'Browse'
+        on_press: root.manager.browse_click()
 
     
+''')
 
+#root for this button points to first screen
 
+class Manager(ScreenManager):
+    def __init__(self, *widgets, **kargs):
+        super(Manager, self).__init__(**kargs)
+        for wi in widgets:
+            self.add_widget(wi())
 
-
-
-class CaputeImage(BoxLayout):
-    #wtf init method is called after build. this should only be used to store button functions. never put init method in this function. dk when is it called
-    def __init__(self, **kargs):
-        super(CaputeImage, self).__init__(**kargs)
+    def browse_click(self):
+        print("im clicked")
         self._request_android_permissions()
+
 
     @staticmethod
     def is_android():
@@ -80,19 +59,32 @@ class CaputeImage(BoxLayout):
 
 
 
+
+    
+
+class First_screen(Screen):
+    def __init__(self):
+        super(First_screen, self).__init__()
+
+
+
+class Browse_file(Button):
+    pass
+
+
+
+
+
 class ImageRecognition(App):
 
     def __init__(self):
         super(ImageRecognition, self).__init__()
-        self.capture = cv2.VideoCapture(0)
 
     def build(self):
-        layout = CaputeImage()
-        layout.ids["XinCamera"].start(self.capture)
-        return layout
+        return Manager(First_screen)
 
     def on_stop(self):
-        self.capture.release()
+        pass
 
 if __name__ == "__main__":
     imagerecognition = ImageRecognition()
