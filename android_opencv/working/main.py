@@ -62,20 +62,6 @@ class CaputeImage(BoxLayout):
     #wtf init method is called after build. this should only be used to store button functions. never put init method in this function. dk when is it called
     def __init__(self, **kargs):
         super(CaputeImage, self).__init__(**kargs)
-        self._request_android_permissions()
-
-    @staticmethod
-    def is_android():
-        return platform == 'android'
-
-    def _request_android_permissions(self):
-        """
-        Requests CAMERA permission on Android.
-        """
-        if not self.is_android():
-            return
-        from android.permissions import request_permission, Permission
-        request_permission(Permission.CAMERA)
 
 
 

@@ -1,91 +1,111 @@
-import kivy
-kivy.require('1.9.0')
-
 from kivy.app import App
 from kivy.lang import Builder
-from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.label import Label
-from kivy.uix.button import Button
-from kivy.uix.camera import Camera
 from kivy.uix.screenmanager import ScreenManager, Screen
-
-
-
-from kivy.utils import platform
 from kivy.uix.image import Image
-from kivy.clock import Clock
-from kivy.graphics.texture import Texture
 import cv2
+from kivy.clock import Clock
 
-Builder.load_string('''
-<Browse_file@Button>:
-    font_size: 32
-    color: 0, 0, 0, 1
-    size: 150, 150
-<First_screen>:
-    orientation: 'vertical'
-    Browse_file:
-        text: 'Browse'
-        on_press: root.manager.browse_click()
+kv_text = """\
+#:import WipeTransition kivy.uix.screenmanager.WipeTransition
 
-    
-''')
+<MainScreen>:
+	transition: WipeTransition()
+	id: sm
+	FirstScreen:
+	SecondScreen:
 
-#root for this button points to first screen
+<FirstScreen>:
+	name: "first_screen"
+	GridLayout:
+		id: sterowanie_serv
+		rows: 10
+		padding: 10
+		spacing: 10
+		BoxLayout:
+			spacing: 20
+			XinCam:
+        		id: XinCamera1
+        		resolution: (640, 480)
+        		play: True
+			XinCam:
+        		id: XinCamera2
+        		resolution: (640, 480)
+        		play: True
 
-class Manager(ScreenManager):
-    def __init__(self, *widgets, **kargs):
-        super(Manager, self).__init__(**kargs)
-        for wi in widgets:
-            self.add_widget(wi())
-
-    def browse_click(self):
-        print("im clicked")
-        self._request_android_permissions()
-
-
-    @staticmethod
-    def is_android():
-        return platform == 'android'
-
-    def _request_android_permissions(self):
-        """
-        Requests CAMERA permission on Android.
-        """
-        if not self.is_android():
-            return
-        from android.permissions import request_permission, Permission
-        request_permission(Permission.CAMERA)
-
-
-
-
-    
-
-class First_screen(Screen):
-    def __init__(self):
-        super(First_screen, self).__init__()
-
+<SecondScreen>:
+	name: "second_screen"
+	GridLayout:
+		id: Przemo
+		rows: 5
+		padding: 10
+		spacing: 10
+		BoxLayout:
+			spacing: 20
+			Button:
+				text:'1'
+				on_press: print('Button 1')
+			Button:
+				text:'x2'
+				on_press: print('Button X2')
+			Button:
+				text:'go to First screen'
+				on_press: app.root.current = 'first_screen'
+"""
 
 
-class Browse_file(Button):
-    pass
+class XinCam(Image):
+	def __init__(self, **kargs):
+		super(XinCam, self).__init__(**kargs)
+
+	def start(self, capture, fps=60): #setting the capture need to be called before running on_tex
+		self.capture = capture
+		Clock.schedule_interval(self.update, 1.0 / fps) 
+
+	def update(self, dt):
+		return_value, frame = self.capture.read()
+		if return_value: self.process_frame(frame)
+		self.canvas.ask_update()
+
+	def process_frame(self, frame): #this shouuld process the frame and modify self.texture
+		#print(frame)
+		h, w = frame.shape[0], frame.shape[1]
+		self.texture = Texture.create(size=(w, h))
+		self.texture.flip_vertical()
+		self.texture.blit_buffer(frame.tobytes(), colorfmt='bgr')
 
 
 
 
+class MainScreen(ScreenManager):
+	def __init__(self, cap):
+		super(MainScreen, self).__init__()
+		#print(self.get_screen("first_screen").ids)
+		self.get_screen("first_screen").ids["XinCamera1"].start(cap)
+		self.get_screen("first_screen").ids["XinCamera2"].start(cap)
 
-class ImageRecognition(App):
+class FirstScreen(Screen):
+	#some methods
+	pass
 
-    def __init__(self):
-        super(ImageRecognition, self).__init__()
+class SecondScreen(Screen):
+	#some methods
+	pass
 
-    def build(self):
-        return Manager(First_screen)
+class MyKivyApp(App):
+	def __init__(self):
+		super(MyKivyApp, self).__init__()
+		self.capture = cv2.VideoCapture(0)
 
-    def on_stop(self):
-        pass
+	def build(self):
+		return MainScreen(self.capture)
 
-if __name__ == "__main__":
-    imagerecognition = ImageRecognition()
-    imagerecognition.run()
+	def on_stop(self):
+	   self.capture.release()
+
+def main():
+	Builder.load_string(kv_text)
+	app = MyKivyApp()
+	app.run()
+
+if __name__ == '__main__':
+	main()
